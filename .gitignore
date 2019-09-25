@@ -1,0 +1,13 @@
+# Virtualenv
+env/
+*.env
+
+# vscode 
+/.vscode
+
+# Mac files
+.DS_store
+
+
+# credentials
+credentials/
