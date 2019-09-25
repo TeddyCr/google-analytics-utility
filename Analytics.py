@@ -1,13 +1,12 @@
 from __future__ import print_function
-
 import argparse
 import os
-
+import pandas as pd
 import httplib2
 
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
-from _helpers import managementService, iterResponsePages
+from _helpers import managementService, iterResponsePages, formatDates
 
 
 class GetGAData(object):
@@ -89,7 +88,7 @@ class GetGAData(object):
         
         return accounts_data
 
-
+    @classmethod
     def getData(service, payload, batch=True, verbose=True,):
         """
         Fetch the data from the GA API
@@ -100,14 +99,78 @@ class GetGAData(object):
                 batch: bool, True if to fetch all the data within the data range at once or False to fetch
                        them day by day
                 verbose: bool, display information regarding rows being fetched
+            Return:
+                data: list, contains the report data for the specified request. If batch=False, len(data) = 1 otherwise
+                      len(data) = n when n is the number of days in the date range.
+
         """
+        data = list()
         if batch:
             if verbose:
                 print(f'-----------\nfetching data between {self.start_date} and {self.end_date}')
-            data = iterResponsePages()
+            data.append(iterResponsePages())
             return data
         else:
-            pass
+            dates = formatDates(self.start_date, self.end_date)
+            self.days_ = len(dates)
+            for date in dates:
+                payload.get('reportRequests')[0].get('dateRanges')[0].update({'startDate': date})
+                payload.get('reportRequests')[0].get('dateRanges')[0].update({'endDate': date})
+                data.append(iterResponsePages())
+            return data
+
+
+    @classmethod
+    def dataToFrame(data):
+        """
+        format the raw data from the API response into a pandas dataframe
+
+            Args:
+                data: list, list of dictionnary containing the reporting data
+            Return:
+                df: pandas.DataFrame, a dataframe object contaning the formated reporting data
+        """
+        dfs = list()
+
+        for datum in data:
+            for report in datum.get('reports'):
+                columnHeader = report.get('columnHeader')
+                dimensionHeader = columnHeader.get('dimension')
+                metricHeaders = columnHeader.get('metricHeader')
+                metricHeaderEntries = metricHeaders.get('metricHeaderEntries')
+                metricHeader = list()
+
+                for mHeader in metricHeaderEntries:
+                    metricHeader.append(mHeader.get('name'))
+
+                headers = dimensionHeader + metricHeader
+
+                dims = [[] for _ in range(len(dimensionHeader))]
+                metrics = [[] for _ in range(len(metricHeaderEntries))]
+                rows = report.get('data').get('rows')
+
+                for row in rows:
+                    dimensions = row.get('dimensions')
+                    metrics = row.get('metrics')
+
+                    for i, dimension in enumerate(dimensions):
+                        dims[i].append(dimension)
+
+                    for metric in metrics:
+                        values = metric.get('values')
+                        for i, value in enumerate(values):
+                            mets[i].append(value)
+
+                dims_mets = dims + mets
+                
+                df_tmp = dict()
+                for i, header in enumerate(headers):
+                    df_tmp[header] = dims_mets[i]
+
+                dfs.append(pd.DataFrame(df_tmp))
+
+        df = pd.concat(dfs)
+        return df        
 
 
     @classmethod

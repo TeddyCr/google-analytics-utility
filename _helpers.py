@@ -1,5 +1,6 @@
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
+from datetime import datetime, timedelta
 
 import os
 
@@ -59,5 +60,20 @@ def iterResponsePages(service, payload, verbose):
     return data
         
 
+def formatDates(start_date, end_date):
+    """
+    Iterate over the date range provided to create a list of single days
+
+        Args:
+            start_date: str, a string representation of the start date for the desired date range
+            end_date: str, a string representation of the end date for the desired date range
+        Return:
+            dates: list, strings representing each single days for the date range chosen
+    """
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+    dates = [(end_date - timedelta(days=d)) for d in range((end_date - start_date).days + 1)]
+
+    return dates
 
 
