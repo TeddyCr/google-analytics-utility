@@ -32,7 +32,8 @@ You will need to create 4 environment variables (5 if you wish to run the tests)
 # Getting Started
 ## Installation
 Install from pip:  
-This is currently not supported  
+*pip installation is currently not supported*  
+
 Install from source:  
 ```
 git clone https://github.com/TeddyCr/google-analytics-utility.git
