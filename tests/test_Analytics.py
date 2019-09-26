@@ -125,7 +125,7 @@ class testAnalyticsAPI(unittest.TestCase):
 
     def testDataFormatting(self):
         payload = self.analytics.formatPayload(['ga:date','ga:deviceCategory', 'ga:browser'],
-                                          ['ga:sessions', 'ga:pageviews'], view_id='189552010',
+                                          ['ga:sessions', 'ga:pageviews'], view_id=os.environ.get('GA_API_TEST_VIEWID'),
                                           dimensions_filters=[('ga:deviceCategory', False, 'EXACT', 'mobile', False)],
                                           metrics_filters=[('ga:sessions', False, 'GREATER_THAN', '1')])
         data = self.analytics.getData(self.service, payload, batch=True)
