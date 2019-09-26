@@ -23,7 +23,7 @@ class GetGAData(object):
         self.end_date = end_date
 
 
-    def initService():
+    def initService(self):
         """
         The value used for this method need to be created through an environment variable
 
@@ -40,12 +40,12 @@ class GetGAData(object):
             scopes=scopes
         )
 
-        service = build(api_name, api_version, credentials=credentials)
+        service = build(name, version, credentials=credentials)
 
         return service
 
 
-    def getAccountDetails():
+    def getAccountDetails(self):
         """
         Fetch all the viewId linked to an account. This function uses a v3 service created for the
         helper.py file.
@@ -175,82 +175,82 @@ class GetGAData(object):
 
     @classmethod
     def formatPayload(dimensions, metrics, view_id, operator=None, dimensions_filters=None, metrics_filters=None):
-    """  
-        Format the payload for the GA API
-        Args:
-            dimensions: list of GA dimension to be returned 
-                        https://developers.google.com/analytics/devguides/reporting/core/dimsmets
-            metrics: list of GA metrics to be returned https://developers.google.com/analytics/devguides/reporting/core/dimsmets
-            view_id: the view id from which the data should be retrieve. Raise error if None
-            operator: string the operator to be used to perform the filtering operation
-                    'AND' or 'OR' default to None. If None, then perform an 'OR' operation
-            dimensions_filter: list of tuple containing the logical operation to be performed for filtering. Each tuple
+        """  
+            Format the payload for the GA API
+            Args:
+                dimensions: list of GA dimension to be returned 
+                            https://developers.google.com/analytics/devguides/reporting/core/dimsmets
+                metrics: list of GA metrics to be returned https://developers.google.com/analytics/devguides/reporting/core/dimsmets
+                view_id: the view id from which the data should be retrieve. Raise error if None
+                operator: string the operator to be used to perform the filtering operation
+                        'AND' or 'OR' default to None. If None, then perform an 'OR' operation
+                dimensions_filter: list of tuple containing the logical operation to be performed for filtering. Each tuple
+                                    represents 1 logical operation and tuple value correspond to
+                                        tuple[0] dimension name
+                                        tuple[1] logical expression (True or False) to include or exclude
+                                        tuple[2] dimension operator ('REGEXP' or 'EXACT')
+                                        tuple[3] expression
+                dmetrics_filter: list of tuple containing the logical operation to be performed for filtering. Each tuple
                                 represents 1 logical operation and tuple value correspond to
-                                    tuple[0] dimension name
-                                    tuple[1] logical expression (True or False) to include or exclude
-                                    tuple[2] dimension operator ('REGEXP' or 'EXACT')
-                                    tuple[3] expression
-            dmetrics_filter: list of tuple containing the logical operation to be performed for filtering. Each tuple
-                             represents 1 logical operation and tuple value correspond to
-                                    tuple[0] metric name
-                                    tuple[1] metric operator ('REGEXP' or 'EXACT')
-                                    tuple[2] expression
-        Return:
-            payload: dict, returns a dictionnary representation of the payload to be passed with the service object in the
-                     API call            
-    """
-    formated_dimensions = list()
-    formated_metrics = list()
-    
-    for dimension in dimensions:
-        formated_dimensions.append({'name':dimension})
+                                        tuple[0] metric name
+                                        tuple[1] metric operator ('REGEXP' or 'EXACT')
+                                        tuple[2] expression
+            Return:
+                payload: dict, returns a dictionnary representation of the payload to be passed with the service object in the
+                        API call            
+        """
+        formated_dimensions = list()
+        formated_metrics = list()
         
-    for metric in metrics:
-        formated_metrics.append({'expression': metric})
-    
-    dim_filters = list()
-    met_filters = list()
-    
-    if dimensions_filters:
-        for dim_filt in dimensions_filters:
-            dim_filters.append({
-                'dimensionName': dim_filt[0],
-                'not': dim_filt[1],
-                'operator': dim_filt[2],
-                'expressions': dim_filt[3]
-            })
+        for dimension in dimensions:
+            formated_dimensions.append({'name':dimension})
             
-    if metrics_filters:
-        for met_filt in metrics_filters:
-            met_filters.append({
-                "metricName": met_filt[0],
-                "operator": met_filt[1],
-                "comparisonValue": met_filt[2]
-            })
-            
-            
-    payload = {
-        'reportRequests': [{
-            'viewId': VIEW_ID,
-            'dateRanges': [
-                {
-                    'startDate': f'{self.start_date}',
-                    'endDate': f'{self.end_date}',
-                }
-            ],
-            'dimensions': formated_dimensions,
-            'metrics': formated_metrics,
-            'pageToken': '0',
-            'pageSize': 100000,
-            "dimensionFilterClauses":  [{ 
-                        "operator": operator,
-                        "filters": dim_filters
-            }],
-            "metricFilterClauses":  [{ 
-                        "operator": operator,
-                        "filters": met_filters
-            }],
-        }]
-    }
-    
-    return payload
+        for metric in metrics:
+            formated_metrics.append({'expression': metric})
+        
+        dim_filters = list()
+        met_filters = list()
+        
+        if dimensions_filters:
+            for dim_filt in dimensions_filters:
+                dim_filters.append({
+                    'dimensionName': dim_filt[0],
+                    'not': dim_filt[1],
+                    'operator': dim_filt[2],
+                    'expressions': dim_filt[3]
+                })
+                
+        if metrics_filters:
+            for met_filt in metrics_filters:
+                met_filters.append({
+                    "metricName": met_filt[0],
+                    "operator": met_filt[1],
+                    "comparisonValue": met_filt[2]
+                })
+                
+                
+        payload = {
+            'reportRequests': [{
+                'viewId': VIEW_ID,
+                'dateRanges': [
+                    {
+                        'startDate': f'{self.start_date}',
+                        'endDate': f'{self.end_date}',
+                    }
+                ],
+                'dimensions': formated_dimensions,
+                'metrics': formated_metrics,
+                'pageToken': '0',
+                'pageSize': 100000,
+                "dimensionFilterClauses":  [{ 
+                            "operator": operator,
+                            "filters": dim_filters
+                }],
+                "metricFilterClauses":  [{ 
+                            "operator": operator,
+                            "filters": met_filters
+                }],
+            }]
+        }
+        
+        return payload

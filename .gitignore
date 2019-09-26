@@ -11,3 +11,6 @@ env/
 
 # credentials
 credentials/
+
+# cache files
+__pycache__/
