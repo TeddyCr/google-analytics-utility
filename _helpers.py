@@ -14,7 +14,7 @@ def managementService():
                 service: googleapiclient.discovery.Resource object, a Google API service object v3
         """
         scopes = os.environ.get('GA_API_SCOPES').split(',')
-        name = os.environ.get('GA_API_NAME')
+        name = 'analytics'
         version = 'v3'
         file_path = os.environ.get('GA_API_CREDS')
 
@@ -23,7 +23,7 @@ def managementService():
             scopes=scopes
         )
 
-        management_service = build(api_name, api_version, credentials=credentials)
+        management_service = build(name, version, credentials=credentials)
 
         return management_service
 
@@ -46,13 +46,13 @@ def iterResponsePages(service, payload, verbose):
         if verbose:
             print(f'Fetching rows starting at position: {token}')
         data_tmp = service.reports().batchGet(body=payload).execute()
-        token = data.get('reports')[0].get('nextPageToken')
+        token = data_tmp.get('reports')[0].get('nextPageToken')
 
-        if token != "None":
+        if token != None:
             payload.get('reportRequests')[0].update({'pageToken': token})
         else:
             next_page = False
-            payload.get('reportRequests')[0].update({'pageToken': 0})
+            payload.get('reportRequests')[0].update({'pageToken': '0'})
 
         for report in data_tmp.get('reports'):
             data.get('reports').append(report)
@@ -72,7 +72,7 @@ def formatDates(start_date, end_date):
     """
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
-    dates = [(end_date - timedelta(days=d)) for d in range((end_date - start_date).days + 1)]
+    dates = [(end_date - timedelta(days=d)).strftime('%Y-%m-%d') for d in range((end_date - start_date).days + 1)]
 
     return dates
 
