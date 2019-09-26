@@ -7,7 +7,7 @@ import time
 
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
-from _helpers import managementService, iterResponsePages, formatDates
+from googleAnalyticUtility._helpers import managementService, iterResponsePages, formatDates
 
 
 class Management(object):
