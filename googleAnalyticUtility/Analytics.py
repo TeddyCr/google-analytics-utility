@@ -182,7 +182,6 @@ class GetGAData(object):
             dates = formatDates(self.start_date, self.end_date)
             self.days_ = len(dates)
             for date in dates:
-                time.sleep(0.1)
                 if verbose:
                     print(f'-----------\nfetching data between {date} and {date}')
                 payload.get('reportRequests')[0].get('dateRanges')[0].update({'startDate': date})
