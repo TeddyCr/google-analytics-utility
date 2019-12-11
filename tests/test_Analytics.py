@@ -4,7 +4,7 @@ import os
 import apiclient
 import pandas as pd
 
-from Analytics import GetGAData, Management
+from googleAnalyticUtility.Analytics import GetGAData, Management
 
 
 class testAnalyticsAPI(unittest.TestCase):
@@ -14,18 +14,17 @@ class testAnalyticsAPI(unittest.TestCase):
 
     def setUp(self):
         """
-            self.service: apiclient.discovery.Resource, service object that will be call each time a TestCase will be called
+            self.analytics: googleAnalyticUtility.Analytics.GetGAData object representing the insitiation of the class
             self.account_details: dict, a dictionnary representing accounts details
         """
         self.analytics = GetGAData('2019-09-20', '2019-09-24')
-        self.service = Management().initService()
         self.account_details = Management().getAccountDetails()
 
 
     def testServiceObject(self):
         """
         """
-        self.assertIsInstance(self.service, apiclient.discovery.Resource)
+        self.assertIsInstance(self.analytics.report_service, apiclient.discovery.Resource)
 
 
     def testAccountDetailsResponse(self):
@@ -68,7 +67,7 @@ class testAnalyticsAPI(unittest.TestCase):
                                 metric_operator=op,
                                 metrics_filters=[('ga:sessions', False, 'GREATER_THAN', '1')])
             
-            l = len(self.analytics.getData(self.service, payload)[0].get('reports'))
+            l = len(self.analytics.getData(payload)[0].get('reports'))
             self.assertGreater(l, 0)
 
     
@@ -85,7 +84,7 @@ class testAnalyticsAPI(unittest.TestCase):
                                                     ('ga:browser', False, 'EXACT', 'Safari', True)],
                                 metrics_filters=[('ga:sessions', False, 'GREATER_THAN', '1')])
             
-            l = len(self.analytics.getData(self.service, payload)[0].get('reports'))
+            l = len(self.analytics.getData(payload)[0].get('reports'))
             self.assertGreater(l, 0)
 
 
@@ -102,7 +101,7 @@ class testAnalyticsAPI(unittest.TestCase):
                                                     ('ga:browser', False, 'EXACT', 'Safari', True)],
                                 metrics_filters=[('ga:sessions', False, op, '1')])
             
-            l = len(self.analytics.getData(self.service, payload)[0].get('reports'))
+            l = len(self.analytics.getData(payload)[0].get('reports'))
             self.assertGreater(l, 0)
 
 
@@ -119,7 +118,7 @@ class testAnalyticsAPI(unittest.TestCase):
                                                     ('ga:browser', n, 'EXACT', 'Safari', True)],
                                 metrics_filters=[('ga:sessions', n, 'LESS_THAN', '1')])
             
-            l = len(self.analytics.getData(self.service, payload)[0].get('reports'))
+            l = len(self.analytics.getData(payload)[0].get('reports'))
             self.assertGreater(l, 0)
 
 
@@ -128,7 +127,7 @@ class testAnalyticsAPI(unittest.TestCase):
                                           ['ga:sessions', 'ga:pageviews'], view_id=os.environ.get('GA_API_TEST_VIEWID'),
                                           dimensions_filters=[('ga:deviceCategory', False, 'EXACT', 'mobile', False)],
                                           metrics_filters=[('ga:sessions', False, 'GREATER_THAN', '1')])
-        data = self.analytics.getData(self.service, payload, batch=True)
+        data = self.analytics.getData(payload, batch=True)
         df = Management.dataToFrame(data)
         self.assertIsInstance(df, pd.DataFrame)
 

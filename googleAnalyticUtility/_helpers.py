@@ -27,6 +27,29 @@ def managementService():
 
         return management_service
 
+
+def reportService():
+        """
+        The value used for this method need to be created through an environment variable
+
+            Return:
+                service: googleapiclient.discovery.Resource object, a Google API service object
+        """
+        scopes = os.environ.get('GA_API_SCOPES').split(',')
+        name = os.environ.get('GA_API_NAME')
+        version = os.environ.get('GA_API_VERSION')
+        file_path = os.environ.get('GA_API_CREDS')
+
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(
+            file_path, 
+            scopes=scopes
+        )
+
+        service = build(name, version, credentials=credentials)
+
+        return service
+
+
 def iterResponsePages(service, payload, verbose):
     """
     iter through the response pages and concat the data from different pages under one 
