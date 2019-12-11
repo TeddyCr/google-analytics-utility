@@ -7,7 +7,7 @@ import time
 
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.discovery import build
-from googleAnalyticUtility._helpers import managementService, iterResponsePages, formatDates
+from googleAnalyticUtility._helpers import managementService, reportService, iterResponsePages, formatDates
 
 
 class Management(object):
@@ -18,31 +18,14 @@ class Management(object):
         - format ga returned data to a dataframe
     """
 
-    @staticmethod
-    def initService():
+    def __init__(self):
         """
-        The value used for this method need to be created through an environment variable
 
-            Return:
-                service: googleapiclient.discovery.Resource object, a Google API service object
         """
-        scopes = os.environ.get('GA_API_SCOPES').split(',')
-        name = os.environ.get('GA_API_NAME')
-        version = os.environ.get('GA_API_VERSION')
-        file_path = os.environ.get('GA_API_CREDS')
-
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            file_path, 
-            scopes=scopes
-        )
-
-        service = build(name, version, credentials=credentials)
-
-        return service
+        self.management_service = managementService()
 
     
-    @staticmethod
-    def getAccountDetails():
+    def getAccountDetails(self):
         """
         Fetch all the viewId linked to an account. This function uses a v3 service created for the
         helper.py file.
@@ -50,23 +33,21 @@ class Management(object):
             Return:
                 accounts_data: dict, represents the account, property, and view data (id and name)
         """
-        management_service = managementService()
-
         accounts_data = {'accounts': list()}
         
-        accounts = management_service.management().accounts().list().execute().get('items')
+        accounts = self.management_service.management().accounts().list().execute().get('items')
         for accounti in accounts:
             account_id = accounti.get('id')
             account_name = accounti.get('name')
             account_properties = list()
 
-            properties = management_service.management().webproperties().list(accountId=account_id).execute().get('items')
+            properties = self.management_service.management().webproperties().list(accountId=account_id).execute().get('items')
             for propertyi in properties:
                 property_id = propertyi.get('id')
                 property_name = propertyi.get('name')
                 property_views = list()
 
-                views = management_service.management().profiles().list(accountId=account_id, 
+                views = self.management_service.management().profiles().list(accountId=account_id, 
                                                                         webPropertyId=property_id).execute().get('items')
                 for viewi in views:
                     view_id = viewi.get('id')
@@ -155,9 +136,10 @@ class GetGAData(object):
         """
         self.start_date = start_date
         self.end_date = end_date
+        self.report_service = reportService()
 
 
-    def getData(self, service, payload, batch=True, verbose=True,):
+    def getData(self, payload=None, batch=True, verbose=True,):
         """
         Fetch the data from the GA API
 
@@ -172,6 +154,7 @@ class GetGAData(object):
                       len(data) = n when n is the number of days in the date range.
 
         """
+        service = self.report_service
         data = list()
         if batch:
             if verbose:
