@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="googleAnalyticUtility",
-    version="0.2.0",
+    version="0.2.4",
     author="Teddy Crepineau",
     author_email="teddy.crepineau.pro@gmail.com",
     description="A package to easily interact with the Google Analytics API",

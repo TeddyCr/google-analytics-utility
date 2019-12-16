@@ -272,7 +272,7 @@ class DataImport(object):
     in Google Analytics
     """
 
-    def __init__(self):
+    def __init__(self, datasource_id=None):
         """
         Instantiate an object for the class. 
             Args:
@@ -287,10 +287,35 @@ class DataImport(object):
                 _propertyId: str, the property id assigned to the custom data source
                 _dataSouceId: str, the id of the data source
         """
-        self._managementService = managementService()
+        self._managementService = managementService().management()
         self._accountId = os.getenv('GA_ACCOUNT_ID')
         self._propertyId = os.getenv('GA_PROPERTY_ID')
-        self._dataSouceId = os.getenv('GA_DATASOURCE_ID')
+        self._dataSouceId = datasource_id
+
+    def getUploadStatus(self, uploadId):
+        """
+        Fetch the upload status of a specific upload:
+            Args:
+               uploadId: str, the id of the data uploaded
+
+            Return:
+                dict, a representation of the status of the file 
+        """
+        try:
+            status = self._managementService.uploads().get(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                uploadId=uploadId
+            ).execute()
+
+            return status
+        
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}' 
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
 
 
     def getUploadedData(self):
@@ -358,7 +383,7 @@ class DataImport(object):
         """
         
         try:
-            media - MediaFileUpload(file_path, mimetype='application/octet-stream',
+            media = MediaFileUpload(file_path, mimetype='application/octet-stream',
                                 resumable=False)
             upload = self._managementService.uploads().uploadData(
                 accountId=self._accountId,
@@ -367,7 +392,18 @@ class DataImport(object):
                 media_body=media    
             ).execute()
 
-            return upload
+            upload_id = upload.get('id')
+            
+            upload_status = 'PENDING'
+
+            while upload_status == 'PENDING':
+                status = self.getUploadStatus(upload_id)
+                upload_status = status.get('status')
+
+                if upload_status == 'FAILED':
+                    return f'Upload Failed: {status.get("errors")}'
+    
+            return f'Upload Success: {upload_status}'
         
         except TypeError as err:
             return f'We found an error in your query structure: {err}'
