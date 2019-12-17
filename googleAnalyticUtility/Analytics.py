@@ -6,7 +6,8 @@ import httplib2
 import time
 
 from oauth2client.service_account import ServiceAccountCredentials
-from apiclient.discovery import build
+from apiclient.errors import HttpError
+from apiclient.http import MediaFileUpload
 from googleAnalyticUtility._helpers import managementService, reportService, iterResponsePages, formatDates
 
 
@@ -24,7 +25,7 @@ class Management(object):
         """
         self.management_service = managementService()
 
-    
+
     def getAccountDetails(self):
         """
         Fetch all the viewId linked to an account. This function uses a v3 service created for the
@@ -263,3 +264,149 @@ class GetGAData(object):
         }
         
         return payload
+
+
+class DataImport(object):
+    """
+    The DataImport() class has a suite of methods used to perform operation on custom data sources
+    in Google Analytics
+    """
+
+    def __init__(self, datasource_id=None):
+        """
+        Instantiate an object for the class. 
+            Args:
+                None
+
+            Return:
+                None
+
+            Variables:
+                _managementService: a google service for the management API
+                _accountId: str, the account id where the custom data source is located 
+                _propertyId: str, the property id assigned to the custom data source
+                _dataSouceId: str, the id of the data source
+        """
+        self._managementService = managementService().management()
+        self._accountId = os.getenv('GA_ACCOUNT_ID')
+        self._propertyId = os.getenv('GA_PROPERTY_ID')
+        self._dataSouceId = datasource_id
+
+    def getUploadStatus(self, uploadId):
+        """
+        Fetch the upload status of a specific upload:
+            Args:
+               uploadId: str, the id of the data uploaded
+
+            Return:
+                dict, a representation of the status of the file 
+        """
+        try:
+            status = self._managementService.uploads().get(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                uploadId=uploadId
+            ).execute()
+
+            return status
+        
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}' 
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+
+    def getUploadedData(self):
+        """
+        Fetch the ids of all table uploaded to a specific data source
+            Args:
+                None
+            
+            Return:
+                None
+        """
+        try:
+            lst = self._managementService.uploads().list(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId
+            ).execute()
+
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+        tables = []
+        for table in lst.get('items', []):
+            tables.append(table.get('id'))
+
+        return tables
+
+
+    def deleteUploadedTables(self, tables):
+        """
+        Delete previously uploaded tables in the datasoure
+            Args:
+                tables: []int, a list of integer representing the id of the tables to delete
+
+            Return:
+                1 or error
+        """
+        try:
+            self._managementService.uploads().deleteUploadData(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                body={
+                    'customDataImportUids': tables    
+                }
+            ).execute()
+
+            return 0
+
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+
+    def uploadData(self, file_path):
+        """
+        This method is used to upload a file to the specified Data Source
+            Args:
+                file_path: str, a string representation of the file to upload
+        """
+        
+        try:
+            media = MediaFileUpload(file_path, mimetype='application/octet-stream',
+                                resumable=False)
+            upload = self._managementService.uploads().uploadData(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                media_body=media    
+            ).execute()
+
+            upload_id = upload.get('id')
+            
+            upload_status = 'PENDING'
+
+            while upload_status == 'PENDING':
+                status = self.getUploadStatus(upload_id)
+                upload_status = status.get('status')
+
+                if upload_status == 'FAILED':
+                    return f'Upload Failed: {status.get("errors")}'
+    
+            return f'Upload Success: {upload_status}'
+        
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+    
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
