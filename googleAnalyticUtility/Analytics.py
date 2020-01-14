@@ -6,8 +6,9 @@ import httplib2
 import time
 
 from oauth2client.service_account import ServiceAccountCredentials
-from apiclient.discovery import build
-from googleAnalyticUtility._helpers import managementService, iterResponsePages, formatDates
+from apiclient.errors import HttpError
+from apiclient.http import MediaFileUpload
+from googleAnalyticUtility._helpers import managementService, reportService, iterResponsePages, formatDates
 
 
 class Management(object):
@@ -18,31 +19,14 @@ class Management(object):
         - format ga returned data to a dataframe
     """
 
-    @staticmethod
-    def initService():
+    def __init__(self):
         """
-        The value used for this method need to be created through an environment variable
 
-            Return:
-                service: googleapiclient.discovery.Resource object, a Google API service object
         """
-        scopes = os.environ.get('GA_API_SCOPES').split(',')
-        name = os.environ.get('GA_API_NAME')
-        version = os.environ.get('GA_API_VERSION')
-        file_path = os.environ.get('GA_API_CREDS')
+        self.management_service = managementService()
 
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            file_path, 
-            scopes=scopes
-        )
 
-        service = build(name, version, credentials=credentials)
-
-        return service
-
-    
-    @staticmethod
-    def getAccountDetails():
+    def getAccountDetails(self):
         """
         Fetch all the viewId linked to an account. This function uses a v3 service created for the
         helper.py file.
@@ -50,23 +34,21 @@ class Management(object):
             Return:
                 accounts_data: dict, represents the account, property, and view data (id and name)
         """
-        management_service = managementService()
-
         accounts_data = {'accounts': list()}
         
-        accounts = management_service.management().accounts().list().execute().get('items')
+        accounts = self.management_service.management().accounts().list().execute().get('items')
         for accounti in accounts:
             account_id = accounti.get('id')
             account_name = accounti.get('name')
             account_properties = list()
 
-            properties = management_service.management().webproperties().list(accountId=account_id).execute().get('items')
+            properties = self.management_service.management().webproperties().list(accountId=account_id).execute().get('items')
             for propertyi in properties:
                 property_id = propertyi.get('id')
                 property_name = propertyi.get('name')
                 property_views = list()
 
-                views = management_service.management().profiles().list(accountId=account_id, 
+                views = self.management_service.management().profiles().list(accountId=account_id, 
                                                                         webPropertyId=property_id).execute().get('items')
                 for viewi in views:
                     view_id = viewi.get('id')
@@ -155,9 +137,10 @@ class GetGAData(object):
         """
         self.start_date = start_date
         self.end_date = end_date
+        self.report_service = reportService()
 
 
-    def getData(self, service, payload, batch=True, verbose=True, slow_down=0):
+    def getData(self, payload=None, batch=True, verbose=True,):
         """
         Fetch the data from the GA API
 
@@ -172,6 +155,7 @@ class GetGAData(object):
                       len(data) = n when n is the number of days in the date range.
 
         """
+        service = self.report_service
         data = list()
         if batch:
             if verbose:
@@ -280,3 +264,149 @@ class GetGAData(object):
         }
         
         return payload
+
+
+class DataImport(object):
+    """
+    The DataImport() class has a suite of methods used to perform operation on custom data sources
+    in Google Analytics
+    """
+
+    def __init__(self, datasource_id=None):
+        """
+        Instantiate an object for the class. 
+            Args:
+                None
+
+            Return:
+                None
+
+            Variables:
+                _managementService: a google service for the management API
+                _accountId: str, the account id where the custom data source is located 
+                _propertyId: str, the property id assigned to the custom data source
+                _dataSouceId: str, the id of the data source
+        """
+        self._managementService = managementService().management()
+        self._accountId = os.getenv('GA_ACCOUNT_ID')
+        self._propertyId = os.getenv('GA_PROPERTY_ID')
+        self._dataSouceId = datasource_id
+
+    def getUploadStatus(self, uploadId):
+        """
+        Fetch the upload status of a specific upload:
+            Args:
+               uploadId: str, the id of the data uploaded
+
+            Return:
+                dict, a representation of the status of the file 
+        """
+        try:
+            status = self._managementService.uploads().get(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                uploadId=uploadId
+            ).execute()
+
+            return status
+        
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}' 
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+
+    def getUploadedData(self):
+        """
+        Fetch the ids of all table uploaded to a specific data source
+            Args:
+                None
+            
+            Return:
+                None
+        """
+        try:
+            lst = self._managementService.uploads().list(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId
+            ).execute()
+
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+        tables = []
+        for table in lst.get('items', []):
+            tables.append(table.get('id'))
+
+        return tables
+
+
+    def deleteUploadedTables(self, tables):
+        """
+        Delete previously uploaded tables in the datasoure
+            Args:
+                tables: []int, a list of integer representing the id of the tables to delete
+
+            Return:
+                1 or error
+        """
+        try:
+            self._managementService.uploads().deleteUploadData(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                body={
+                    'customDataImportUids': tables    
+                }
+            ).execute()
+
+            return 0
+
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
+
+
+    def uploadData(self, file_path):
+        """
+        This method is used to upload a file to the specified Data Source
+            Args:
+                file_path: str, a string representation of the file to upload
+        """
+        
+        try:
+            media = MediaFileUpload(file_path, mimetype='application/octet-stream',
+                                resumable=False)
+            upload = self._managementService.uploads().uploadData(
+                accountId=self._accountId,
+                webPropertyId=self._propertyId,
+                customDataSourceId=self._dataSouceId,
+                media_body=media    
+            ).execute()
+
+            upload_id = upload.get('id')
+            
+            upload_status = 'PENDING'
+
+            while upload_status == 'PENDING':
+                status = self.getUploadStatus(upload_id)
+                upload_status = status.get('status')
+
+                if upload_status == 'FAILED':
+                    return f'Upload Failed: {status.get("errors")}'
+    
+            return f'Upload Success: {upload_status}'
+        
+        except TypeError as err:
+            return f'We found an error in your query structure: {err}'
+    
+        except HttpError as err:
+            return f'We found an API error while performing your request: {err}'
