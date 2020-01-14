@@ -157,7 +157,7 @@ class GetGAData(object):
         self.end_date = end_date
 
 
-    def getData(self, service, payload, batch=True, verbose=True,):
+    def getData(self, service, payload, batch=True, verbose=True, slow_down=0):
         """
         Fetch the data from the GA API
 
@@ -176,7 +176,7 @@ class GetGAData(object):
         if batch:
             if verbose:
                 print(f'-----------\nfetching data between {self.start_date} and {self.end_date}')
-            data.append(iterResponsePages(service, payload, verbose))
+            data.append(iterResponsePages(service, payload, verbose, slow_down))
             return data
         else:
             dates = formatDates(self.start_date, self.end_date)
@@ -186,7 +186,7 @@ class GetGAData(object):
                     print(f'-----------\nfetching data between {date} and {date}')
                 payload.get('reportRequests')[0].get('dateRanges')[0].update({'startDate': date})
                 payload.get('reportRequests')[0].get('dateRanges')[0].update({'endDate': date})
-                data.append(iterResponsePages(service, payload, verbose))
+                data.append(iterResponsePages(service, payload, verbose, slow_down))
             return data        
 
 
