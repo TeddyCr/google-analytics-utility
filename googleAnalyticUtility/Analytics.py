@@ -140,7 +140,7 @@ class GetGAData(object):
         self.report_service = reportService()
 
 
-    def getData(self, payload=None, batch=True, verbose=True,):
+    def getData(self, payload=None, batch=True, verbose=True, slow_down=0):
         """
         Fetch the data from the GA API
 

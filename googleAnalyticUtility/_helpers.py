@@ -51,7 +51,7 @@ def reportService():
         return service
 
 
-def iterResponsePages(service, payload, verbose):
+def iterResponsePages(service, payload, verbose, slow_down):
     """
     iter through the response pages and concat the data from different pages under one 
     'reports' key dictionnary.
@@ -71,6 +71,7 @@ def iterResponsePages(service, payload, verbose):
             print(f'Fetching rows starting at position: {token}')
         if slow_down > 0:
             time.sleep(slow_down)
+            
         data_tmp = service.reports().batchGet(body=payload).execute()
         token = data_tmp.get('reports')[0].get('nextPageToken')
 
