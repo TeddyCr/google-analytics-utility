@@ -52,19 +52,12 @@ python setup.py install --user
 
 ## Quick Start
 ### Initiating a service object
-The first thing you will need to do before making a call to the API is initiating a service object by running.  
-```
-from googleAnalyticUtility.Analytics import GetGAData, Management
-service = Management().initService()
-```
+The first thing you will need to do before making a call to the API is initiating a service. You initiate a service by instanciting the `GetData` object.The only element you need to pass to `GetData` are the start and end date.
 
-### Instanciate a GetGAData Class
-Once you have your service created, you will need to instanciate a `GetGAData` object. This object will be use to 1) structure your payload, more information below, and make your request. 
-You will need to pass the start date and the end date of the range you are trying to get data for.  
 ```
 from googleAnalyticUtility.Analytics import GetGAData, Management
-....
-analytics = GetGAData('2019-09-01', '2019-09-02')
+
+analytics = GetGAData('2020-01-01', '2020-03-08')
 ```
 
 ### Structure the payload to be passed with the request
@@ -79,11 +72,11 @@ payload = analytics.formatPayload(['ga:deviceCategory', 'ga:browser'],
 
 ### Get the reporting data
 Once you have your service object and your payload you can use the `getData()` method to get the reporting data. Note that at this point the returned data will be raw. You will need to use the `dataToFrame()` method of the `Management()` class to get your data into a `pd.DataFrame`.  
-You can pass `bash=False` (default to `True`) to send one request per day in your date range. This can be useful if you query a large date range as your data may be sample if you leave the default `bash` option.  
+You can pass `bash=False` (default to `True`) to send one request per day in your date range. This can be useful if you query a large date range as your data may be sample if you leave the default `bash` option. You also have the option to slow dow your request by pasing a float to `slow_down` parameter.
 ```
 from googleAnalyticUtility.Analytics import GetGAData, Management
 ....
-data = analytics.getData(service, payload)
+data = analytics.getData(payload, batch=False, verbose=True, slow_down=0.5)
 ```
 
 ### Format the Data to a DataFrame
